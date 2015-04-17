@@ -395,7 +395,7 @@ fromMat xs = Vec.fromList [Vec.fromList xs' | xs' <- xs]
 v § (r, c) = (v Vec.! r) Vec.! c
 
 --set :: Mat a -> (Int, Int, a) -> Mat a
---set m (r,c,v) = Vec.update m (singleton v)
+--vset m (r,c,v) = Vec.update m (singleton v)
 
 --(//)  :: Mat a -> [(Int,Int,a)] -> Mat a
 --v // xs = v Vec.// xs
