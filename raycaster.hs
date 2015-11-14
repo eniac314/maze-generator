@@ -4,18 +4,20 @@ import GHC.Word
 import GHC.Int
 import Data.Bits
 import Data.List
-import qualified Graphics.UI.SDL as SDL
-import qualified Graphics.UI.SDL.Primitives as SDLP
-import qualified Graphics.UI.SDL.Image as SDLI
-import qualified Graphics.UI.SDL.TTF as SDLT
+import SDL
+import Sdl2
+--import SDL.Image
+import qualified Data.Text as Text
+import Foreign.C.Types
+import Linear hiding (angle)
+import Linear.Affine
 import Control.Monad
 import System.Random
 
 
 data World = World {
-  screen :: SDL.Surface,
-  back :: SDL.Surface,
-  font :: SDLT.Font,
+  screen :: Renderer,
+  --font :: SDLT.Font,
   avatar :: Player,
   direct :: Move
 }
@@ -28,7 +30,7 @@ data Player = Player {
 
 data Move = Forward | Backward | Left | Right | TurnLeft | TurnRight | Stop
 
-data Wall = Wall (Double,Int,Side) | Error deriving Show
+data Wall = Wall (Double,Int,Side) | Wrong deriving Show
 
 data Side = Hori | Verti deriving Show
 
@@ -58,12 +60,12 @@ findHWall p a m =
      then let (xA,yA) = firstHInter p a orient
               stepY = (fI orient) * gridSize
               stepX = stepY / (tan a)
-              loop 0 acc = Error
-              loop n acc | (kindOfWall acc m == (-1)) = Error
+              loop 0 acc = Wrong
+              loop n acc | (kindOfWall acc m == (-1)) = Wrong
                          | (kindOfWall acc m /= 0) = Wall (dist (unitPos p) acc, (kindOfWall acc m),Hori)
                          | otherwise = loop (n-1)  ((fst acc) + stepX, (snd acc) - stepY)
           in loop maxDist (xA,yA)
-     else Error
+     else Wrong
   where dist (x,b) (c,d) = sqrt((x-c)^2 + (b-d)^2)               
 
 findVWall :: Player -> Double -> Mat Int -> Wall
@@ -73,26 +75,26 @@ findVWall p a m =
      then let (xB,yB) = firstVInter p a orient
               stepX = (fI orient) * gridSize
               stepY = stepX * (tan a)
-              loop 0 acc = Error
-              loop n acc | (kindOfWall acc m == (-1)) = Error
+              loop 0 acc = Wrong
+              loop n acc | (kindOfWall acc m == (-1)) = Wrong
                          | (kindOfWall acc m /= 0) = Wall (dist (unitPos p) acc, (kindOfWall acc m), Verti)
                          | otherwise = loop (n-1)  ((fst acc) + stepX, (snd acc) - stepY)
           in loop maxDist (xB,yB)
-     else Error
+     else Wrong
   where dist (x,b) (c,d) = sqrt((x-c)^2 + (b-d)^2)
 
 castRay :: Player -> Double ->  Mat Int -> Wall
 castRay p a m = 
   case (findVWall p a m, findHWall p a m) of 
-    (Wall(d1,t1,s1),Error) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
-    (Error,Wall(d1,t1,s1)) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
+    (Wall(d1,t1,s1),Wrong) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
+    (Wrong,Wall(d1,t1,s1)) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
     (Wall(d1,t1,s1),Wall(d2,t2,s2)) -> if (d1 <= d2)
                                        then Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
                                        else Wall (cos (betaDiff a (angle p)) * d2,t2,s2)
-    _ -> Error
+    _ -> Wrong
 
 fromWall (Wall w) = w
-fromWall Error = (10000,(-1),Hori)
+fromWall Wrong = (10000,(-1),Hori)
 
 betaDiff a b =  min ((2 * pi) - abs(a - b)) (abs(a - b))
 
@@ -147,19 +149,20 @@ normalize a | a > 0 = mod' a (2*pi)
 fI :: (Integral a, Num b) => a -> b
 fI = fromIntegral
 
-projToLines :: [Wall] -> SDL.Surface -> IO [Bool]
-projToLines ws s = sequence $ map (\(w,n) -> wallToLine w s n) (zip ws [1..]) 
+projToLines :: [Wall] -> Renderer -> IO [()]
+projToLines ws r = sequence $ map (\(w,n) -> wallToLine w r n) (zip ws [1..]) 
 
-wallToLine :: Wall -> SDL.Surface -> Int16 -> IO Bool
-wallToLine w s n = let (d,t,si) =  fromWall w
+wallToLine :: Wall -> Renderer -> Double -> IO ()
+wallToLine w r n = let (d,t,si) =  fromWall w
                        h = div (fI.snd $ plane) 2
                        hl = round (d/2)
-                   in SDLP.line s n (h-hl) n (h+hl) (wallTypeToColor (t,si))    
+                       n' = fI . floor $ n
+                   in dLine r (wallTypeToColor (t,si)) (n',(h-hl)) (n',(h+hl))     
                       
 
 
-wallTypeToColor :: (Int,Side) -> SDL.Pixel
-wallTypeToColor (1,Hori) = getPixel 24 24 229
+wallTypeToColor :: (Int,Side) -> Color
+wallTypeToColor (1,Hori) = getPixel 24 24 229 
 wallTypeToColor (1,Verti) =  getPixel 41 41 172
 wallTypeToColor (2,Hori) = getPixel 243 28 28
 wallTypeToColor (2,Verti) =  getPixel 190 8 8
@@ -181,25 +184,14 @@ tan = opp/adj
 ---------------------------------------------------------------------------------------------------
 {- Graphics -}
 
-type Point = (Double,Double)
+getPixel :: Word8 -> Word8 -> Word8 -> Color
+getPixel r g b = (r,g,b,0)
 
-getPixel :: Word8 -> Word8 -> Word8 -> SDL.Pixel
-getPixel r g b = SDL.Pixel $ (shiftL (fi r) 24 .|. shiftL (fi g) 16 .|. shiftL (fi b) 8 .|. (fi 255)) where 
-  fi a = fromIntegral a
+pixelsToScreen :: [Pnt] -> Renderer -> Color -> [IO ()]
+pixelsToScreen xs r c = map (\p -> dPoint r c p) xs
 
-pixelsToScreen :: [Point] -> SDL.Surface -> SDL.Pixel -> [IO Bool]
-pixelsToScreen xs s p = map (\(x,y) -> SDLP.pixel s (fromIntegral.round $ x) (fromIntegral.round $ y) p) xs
-
-linesToScreen :: [(Point,Point)] -> SDL.Surface -> SDL.Pixel -> [IO Bool]
-linesToScreen xs s p = map (\((x1,y1),(x2,y2)) -> SDLP.line s (fromIntegral.round $ x1) (fromIntegral.round $ y1) (fromIntegral.round $ x2) (fromIntegral.round $ y2) p) xs
-
-
-loadImage :: String -> IO SDL.Surface
-loadImage filename = SDLI.load filename  >>= SDL.displayFormatAlpha
-
-applySurface :: Int -> Int -> SDL.Surface -> SDL.Surface -> IO Bool
-applySurface x y src dst = SDL.blitSurface src Nothing dst offset
-    where offset = Just SDL.Rect { SDL.rectX = x, SDL.rectY = y, SDL.rectW = 0, SDL.rectH = 0 }
+linesToScreen :: [(Pnt,Pnt)] -> Renderer -> Color -> [IO ()]
+linesToScreen xs r c = map (\(p1,p2) -> dLine r c p1 p2) xs
 
 --------------------------------------------------------------------------------------------------------
 {- Movments -}
@@ -209,21 +201,26 @@ move w =
  let p = avatar w
 
      loop 0 w _ _ _  = return w
-     loop n w sX sY sA = do let pl = avatar w
+     loop n w sX sY sA = do let render = screen w
+                                pl = avatar w
                                 rays = castRays pl map1
                                 proj = getProjections pl rays
                                 newP = pl { unitPos = (sX + (fst.unitPos $ pl), sY + (snd.unitPos $ pl)),
                                            angle = sA + angle pl}
                             
-                            start <- SDL.getTicks 
+                            start <- ticks 
                             
-                            applySurface 0 0 (back w) (screen w)      
-                            projToLines proj (screen w)
-                            SDL.flip (screen w)
+                            rendererDrawColor (screen w) $= V4 0 0 0 0      
+                            clear render
+                            projToLines proj render
+                            --rendererDrawColor (screen w) $= V4 0 0 0 0 
+                            present render
                             
-                            stop <- SDL.getTicks
-                            let del = (delay start stop)
-                            unless (del == 0) (SDL.delay del)
+
+
+                            stop <- ticks
+                            let del = (timeDelay start stop)
+                            unless (del == 0) (delay del)
                             --putStrLn (show del)
                             loop (n-1) (w {avatar = newP}) sX sY sA
     
@@ -254,14 +251,16 @@ decFov p = let newFov = fov p - (5*pi/360)
 
 renderWorld :: World -> IO World
 renderWorld w = do do let p = avatar w
-                          b = back w
-                          s = screen w
+                          r = screen w
                           rays = castRays p map1
                           proj = getProjections p rays
-                      applySurface 0 0 b s      
-                      projToLines proj s
-                      textToSur (toString p) (font w) 560 10 10 30 s
-                      SDL.flip (screen w)
+                      --clear r
+                      rendererDrawColor (screen w) $= V4 0 0 0 0      
+                      clear r
+                      projToLines proj r
+                      --rendererDrawColor (screen w) $= V4 0 0 0 0
+                      --textToSur (toString p) (font w) 560 10 10 30 s
+                      present r
                       return w
 
 toString :: Player -> String
@@ -273,10 +272,10 @@ toString p = "Fov: " ++ ((take 7).show.toDeg.fov $ p) ++ "\n" ++
 toDeg :: Double -> Double
 toDeg a = a * 360/(2*pi)
 
-delay start stop = let res = 30 - (stop - start)
-                   in if (res > 0 && res < 100 ) then res else 0                      
+timeDelay start stop = let res = 30 - (stop - start)
+                       in if (res > 0 && res < 100 ) then res else 0                      
 -----------------------------------------------------------------------------------------------------
-{- Text -}
+{- Text 
 
 getTextSurface :: String -> SDLT.Font -> IO SDL.Surface
 getTextSurface s f = SDLT.renderTextSolid f s (SDL.Color 191 191 191)
@@ -300,13 +299,14 @@ format  n xs = let chunk _ [] = ([],[])
                                                 (c,r)  -> [c] ++ go r
 
                in map go xs                                    
+-}
 -------------------------------------------------------------------------------------------------------
 {-Main-}
 
 screenWidth = 800
 screenHeight = 600
-fontName = "DejaVuSansMono.ttf"
-fontSize = 14 :: Int
+--fontName = "DejaVuSansMono.ttf"
+--fontSize = 14 :: Int
 
 map1 = fromMat [
   [1,2,3,5,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
@@ -344,43 +344,65 @@ bx = (fI $ (Vec.length (map1 Vec.! 0)))
 
 p1 = Player (pi/3) (95,95) (0)
 
-main = SDL.withInit [SDL.InitEverything] $ do
-    SDLT.init
-    screen <- SDL.setVideoMode screenWidth screenHeight 32 [SDL.SWSurface]
-    black <- loadImage "allBlack.png"
-    fnt <- SDLT.openFont fontName fontSize
+initWindow = defaultWindow {windowInitialSize = V2 (fI screenWidth) (fI screenHeight)}
+
+vsyncRendererConfig = 
+  RendererConfig
+   { SDL.rendererType = SDL.AcceleratedVSyncRenderer
+   , SDL.rendererTargetTexture = False
+   }
+
+
+main = 
+ do initializeAll
+
+    HintRenderScaleQuality $= ScaleLinear
+    renderQuality <- get HintRenderScaleQuality
+    when (renderQuality /= ScaleLinear) $
+     putStrLn "Warning: Linear texture filtering not enabled!"
     
-    let world = World screen black fnt p1 Stop
+    window <- createWindow (Text.pack "RayCaster 0.1") initWindow
+
+    screen <- createRenderer window (-1) defaultRenderer
+    --screen <- createRenderer window (-1) vsyncRendererConfig
+    --fnt <- SDLT.openFont fontName fontSize
+    
+    let world = World screen p1 Stop
 
     loop world
 
     where loop w = do (quit,w1) <- whileEvents w
+                      --rendererDrawColor (screen w) $= V4 0 0 0 0
+                      --clear (screen w)
                       w2 <- move w1
+                      --present (screen w)
+                      
                       unless quit (loop w2)
 
     
           whileEvents w = do
              
-             event      <- SDL.pollEvent
+             event      <- pollEvent
+             
              case event of
-                  SDL.Quit -> return (True,w)
-                  (SDL.KeyUp (SDL.Keysym _ _ _)) -> whileEvents (w {direct = Stop})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_ESCAPE _ _)) -> return (True,w)
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_LCTRL _ _)) -> whileEvents (w {direct = Main.Left})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_LALT _ _)) -> whileEvents (w {direct = Main.Right})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_LEFT _ _)) -> whileEvents (w {direct = TurnLeft})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_RIGHT _ _)) -> whileEvents (w {direct = TurnRight})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_UP _ _)) -> whileEvents (w {direct = Forward})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_DOWN _ _)) -> whileEvents (w {direct = Backward})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_a _ _)) -> whileEvents (w {avatar = decFov (avatar w)})
-                  (SDL.KeyDown (SDL.Keysym SDL.SDLK_z _ _)) -> whileEvents (w {avatar = incFov (avatar w)})
+              Nothing -> return (False,w)
+              Just e -> 
+               case eventPayload e of 
+                 QuitEvent -> return (True,w)
+                 KeyboardEvent (KeyboardEventData _ Released _ _) -> whileEvents (w {direct = Stop}) 
+                 KeyboardEvent (KeyboardEventData _ _ _ (Keysym _ kc _)) -> 
+                  case kc of KeycodeLeft -> whileEvents (w {direct = TurnLeft})
+                             KeycodeRight -> whileEvents (w {direct = TurnRight})
+                             KeycodeUp -> whileEvents (w {direct = Forward})
+                             KeycodeDown -> whileEvents (w {direct = Backward})
+                             KeycodeQ -> whileEvents (w {avatar = decFov (avatar w)})
+                             KeycodeW -> whileEvents (w {avatar = incFov (avatar w)})
+                             KeycodeEscape -> return (True,w)
+                             KeycodeLCtrl -> whileEvents (w {direct = Main.Left})
+                             KeycodeLAlt -> whileEvents (w {direct = Main.Right})
+                             _ -> return (False,w)
+                 _ -> return (False,w)
 
-                  --(SDL.KeyDown (SDL.Keysym SDL.SDLK_RETURN _ _)) -> let out = toChatBot w (reverse.usrStr.changes $ w) in whileEvents $ processOutput out (w{changes = (changes w){usrStr = []}})
-                  --(SDL.MouseButtonDown x y _) -> whileEvents $ updateMouse (x,y) w 
-                  
-
-                  SDL.NoEvent -> return (False,w)
-                  _       -> return (False, w)
 
 -------------------------------------------------------------------------------------------------------------------
 {- Vectors -}

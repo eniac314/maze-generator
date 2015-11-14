@@ -1,0 +1,10 @@
+
+package: sdl2-1.2.0
+os: linux
+arch: x86_64
+compiler: ghc-7.6.3
+client: cabal-install-1.20.0.3
+dependencies: base-4.6.0.1
+install-outcome: InstallOk
+docs-outcome: NotTried
+tests-outcome: NotTried

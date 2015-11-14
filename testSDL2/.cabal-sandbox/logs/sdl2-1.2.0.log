@@ -1,0 +1,22 @@
+Configuring sdl2-1.2.0...
+Building sdl2-1.2.0...
+Preprocessing library sdl2-1.2.0...
+[ 1 of 14] Compiling Graphics.UI.SDL.Enum.Internal ( dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Enum/Internal.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Enum/Internal.o )
+[ 2 of 14] Compiling Graphics.UI.SDL.Platform ( Graphics/UI/SDL/Platform.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Platform.o )
+[ 3 of 14] Compiling Graphics.UI.SDL.Enum ( dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Enum.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Enum.o )
+[ 4 of 14] Compiling Graphics.UI.SDL.Power ( Graphics/UI/SDL/Power.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Power.o )
+[ 5 of 14] Compiling Graphics.UI.SDL.Types ( dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Types.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Types.o )
+[ 6 of 14] Compiling Graphics.UI.SDL.Filesystem ( Graphics/UI/SDL/Filesystem.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Filesystem.o )
+[ 7 of 14] Compiling Graphics.UI.SDL.Event ( Graphics/UI/SDL/Event.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Event.o )
+[ 8 of 14] Compiling Graphics.UI.SDL.Haptic ( Graphics/UI/SDL/Haptic.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Haptic.o )
+[ 9 of 14] Compiling Graphics.UI.SDL.Thread ( Graphics/UI/SDL/Thread.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Thread.o )
+[10 of 14] Compiling Graphics.UI.SDL.Timer ( Graphics/UI/SDL/Timer.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Timer.o )
+[11 of 14] Compiling Graphics.UI.SDL.Video ( Graphics/UI/SDL/Video.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Video.o )
+[12 of 14] Compiling Graphics.UI.SDL.Basic ( Graphics/UI/SDL/Basic.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Basic.o )
+[13 of 14] Compiling Graphics.UI.SDL.Audio ( Graphics/UI/SDL/Audio.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL/Audio.o )
+[14 of 14] Compiling Graphics.UI.SDL  ( Graphics/UI/SDL.hs, dist/dist-sandbox-354ce487/build/Graphics/UI/SDL.o )
+In-place registering sdl2-1.2.0...
+Creating package registration file: /tmp/pkgConf-sdl2-1.212675.0
+Installing library in
+/home/fayong/prog/Haskell/rayCaster/testSDL2/.cabal-sandbox/lib/x86_64-linux-ghc-7.6.3/sdl2-1.2.0
+Registering sdl2-1.2.0...

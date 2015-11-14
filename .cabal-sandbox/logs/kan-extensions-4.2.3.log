@@ -1,0 +1,22 @@
+Configuring kan-extensions-4.2.3...
+Building kan-extensions-4.2.3...
+Preprocessing library kan-extensions-4.2.3...
+[ 1 of 13] Compiling Data.Functor.Kan.Rift ( src/Data/Functor/Kan/Rift.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Kan/Rift.o )
+[ 2 of 13] Compiling Data.Functor.Kan.Lift ( src/Data/Functor/Kan/Lift.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Kan/Lift.o )
+[ 3 of 13] Compiling Data.Functor.Day ( src/Data/Functor/Day.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Day.o )
+[ 4 of 13] Compiling Data.Functor.Contravariant.Coyoneda ( src/Data/Functor/Contravariant/Coyoneda.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Contravariant/Coyoneda.o )
+[ 5 of 13] Compiling Data.Functor.Contravariant.Yoneda ( src/Data/Functor/Contravariant/Yoneda.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Contravariant/Yoneda.o )
+[ 6 of 13] Compiling Data.Functor.Contravariant.Day ( src/Data/Functor/Contravariant/Day.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Contravariant/Day.o )
+[ 7 of 13] Compiling Data.Functor.Kan.Ran ( src/Data/Functor/Kan/Ran.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Kan/Ran.o )
+[ 8 of 13] Compiling Data.Functor.Yoneda ( src/Data/Functor/Yoneda.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Yoneda.o )
+[ 9 of 13] Compiling Control.Monad.Codensity ( src/Control/Monad/Codensity.hs, dist/dist-sandbox-a4bc3bc7/build/Control/Monad/Codensity.o )
+[10 of 13] Compiling Data.Functor.Kan.Lan ( src/Data/Functor/Kan/Lan.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Kan/Lan.o )
+[11 of 13] Compiling Data.Functor.Coyoneda ( src/Data/Functor/Coyoneda.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Functor/Coyoneda.o )
+[12 of 13] Compiling Control.Comonad.Density ( src/Control/Comonad/Density.hs, dist/dist-sandbox-a4bc3bc7/build/Control/Comonad/Density.o )
+[13 of 13] Compiling Control.Monad.Co ( src/Control/Monad/Co.hs, dist/dist-sandbox-a4bc3bc7/build/Control/Monad/Co.o )
+In-place registering kan-extensions-4.2.3...
+Creating package registration file:
+/tmp/pkgConf-kan-extensions-4.21376710097927612902.3
+Installing library in
+/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.2/kan-extensions-4.2.3-1oJ1iDRj9iO6Fl1XfgTIzV
+Registering kan-extensions-4.2.3...

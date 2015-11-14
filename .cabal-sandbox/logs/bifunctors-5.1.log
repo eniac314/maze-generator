@@ -1,0 +1,24 @@
+Configuring bifunctors-5.1...
+Building bifunctors-5.1...
+Preprocessing library bifunctors-5.1...
+[ 1 of 15] Compiling Paths_bifunctors ( dist/dist-sandbox-a4bc3bc7/build/autogen/Paths_bifunctors.hs, dist/dist-sandbox-a4bc3bc7/build/Paths_bifunctors.o )
+[ 2 of 15] Compiling Data.Bifunctor.TH.Internal ( src/Data/Bifunctor/TH/Internal.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/TH/Internal.o )
+[ 3 of 15] Compiling Data.Bifunctor.TH ( src/Data/Bifunctor/TH.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/TH.o )
+[ 4 of 15] Compiling Data.Bifoldable  ( src/Data/Bifoldable.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifoldable.o )
+[ 5 of 15] Compiling Data.Bitraversable ( src/Data/Bitraversable.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bitraversable.o )
+[ 6 of 15] Compiling Data.Biapplicative ( src/Data/Biapplicative.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Biapplicative.o )
+[ 7 of 15] Compiling Data.Bifunctor.Biff ( src/Data/Bifunctor/Biff.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Biff.o )
+[ 8 of 15] Compiling Data.Bifunctor.Clown ( src/Data/Bifunctor/Clown.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Clown.o )
+[ 9 of 15] Compiling Data.Bifunctor.Fix ( src/Data/Bifunctor/Fix.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Fix.o )
+[10 of 15] Compiling Data.Bifunctor.Flip ( src/Data/Bifunctor/Flip.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Flip.o )
+[11 of 15] Compiling Data.Bifunctor.Join ( src/Data/Bifunctor/Join.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Join.o )
+[12 of 15] Compiling Data.Bifunctor.Joker ( src/Data/Bifunctor/Joker.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Joker.o )
+[13 of 15] Compiling Data.Bifunctor.Product ( src/Data/Bifunctor/Product.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Product.o )
+[14 of 15] Compiling Data.Bifunctor.Tannen ( src/Data/Bifunctor/Tannen.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Tannen.o )
+[15 of 15] Compiling Data.Bifunctor.Wrapped ( src/Data/Bifunctor/Wrapped.hs, dist/dist-sandbox-a4bc3bc7/build/Data/Bifunctor/Wrapped.o )
+In-place registering bifunctors-5.1...
+Creating package registration file:
+/tmp/pkgConf-bifunctors-59398195822001100545.1
+Installing library in
+/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.2/bifunctors-5.1-5YALODvEtA24oFsRFahHMX
+Registering bifunctors-5.1...
