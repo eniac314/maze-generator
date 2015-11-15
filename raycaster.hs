@@ -20,6 +20,7 @@ import qualified Data.Map.Strict as Map
 
 data World = World {
   screen :: Renderer,
+  back :: Texture,
   --font :: SDLT.Font,
   avatar :: Player,
   direct :: Move,
@@ -169,11 +170,22 @@ normalize a | a > 0 = mod' a (2*pi)
 fI :: (Integral a, Num b) => a -> b
 fI = fromIntegral
 
-projToLines :: [Wall] -> TextureMap -> Bool -> Renderer -> IO [()]
-projToLines ws pics True r =
- sequence $ map (\(w,n) -> wallToPts w r pics n) (zip ws [1..])
-projToLines ws pics False r =
- sequence $ map (\(w,n) -> wallToLine w r n) (zip ws [1..])
+projToLines :: [Wall] -> TextureMap -> Bool -> Renderer -> Texture -> IO [()]
+projToLines ws pics True r b =
+ do (rendererRenderTarget r) $= Just b
+    clear r
+    mapM (\(w,n) -> wallToPts w r pics n) (zip ws [1..])
+    (rendererRenderTarget r) $= Nothing
+    renderScaledTexture r b
+    return [()]
+
+projToLines ws pics False r b =
+ do (rendererRenderTarget r) $= Just b
+    clear r
+    mapM (\(w,n) -> wallToLine w r n) (zip ws [1..])
+    (rendererRenderTarget r) $= Nothing
+    renderScaledTexture r b
+    return [()]
 
 
 wallToLine :: Wall -> Renderer -> Double -> IO ()
@@ -190,22 +202,20 @@ wallToPts w r pics n =
       n' = fI . floor $ n
       h = div (fI.snd $ plane) 2
       hl = round (d/2)
-      l = fI h + fI hl
+      l = fI $ round d -- height of wall on screen
       ys = [round $ ((gridSize - 1)*y)/l | y <- [0..l]]
       pnts = zip (cycle [off]) ys --Points in texture
       colors = map (wallTypeToTColor (t,si) pics) pnts
       minY = h - hl
       ys' = zip [(n',y) | y <- [minY..(minY + 2*hl)]] colors
-      ys'' = sortBy pointSort ys'
-      ys''' = groupBy pointGroup ys''
-      ys4 = map subList ys'''
 
 
-  
-  in do --sequence $ map (\(p,c) -> dPoint r c p) ys'
-        sequence $ map (\(c,ps) -> dPoints r c ps) ys4
-        --putStrLn $ show ys''' 
-        return ()
+  in drawSortedPoints ys' r 
+
+drawSortedPoints :: [((CInt,CInt),Color)] -> Renderer -> IO ()
+drawSortedPoints xs r =
+ let xs' = (map subList).(groupBy pointGroup).(sortBy pointSort) $ xs  
+ in mapM_ (\(c,ps) -> dPoints r c ps) xs'
 
 pointSort :: ((CInt,CInt),Color) -> ((CInt,CInt),Color) -> Ordering
 pointSort (_ ,c) (_,c')
@@ -285,7 +295,7 @@ move w =
                             
                             rendererDrawColor (screen w) $= V4 0 0 0 0      
                             clear render
-                            projToLines proj p (mapping w) render
+                            projToLines proj p (mapping w) render (back w)
                             --rendererDrawColor (screen w) $= V4 0 0 0 0 
                             present render
                             
@@ -331,7 +341,7 @@ renderWorld w = do do let p = avatar w
                       --clear r
                       rendererDrawColor (screen w) $= V4 0 0 0 0      
                       clear r
-                      projToLines proj pics (mapping w) r
+                      projToLines proj pics (mapping w) r (back w)
                       --rendererDrawColor (screen w) $= V4 0 0 0 0
                       --textToSur (toString p) (font w) 560 10 10 30 s
                       present r
@@ -384,8 +394,10 @@ format  n xs = let chunk _ [] = ([],[])
 -------------------------------------------------------------------------------------------------------
 {-Main-}
 
-screenWidth = 800
-screenHeight = 600
+screenWidth = (fI windowWidth)*(screenHeight)/( fI windowHeight) :: Double
+screenHeight = gridSize * 2 :: Double
+windowWidth = 640 :: Int
+windowHeight = 480 :: Int
 --fontName = "DejaVuSansMono.ttf"
 --fontSize = 14 :: Int
 
@@ -415,8 +427,9 @@ map1 = fromMat [
   [1,4,4,4,4,4,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]] :: Mat Int
 
-plane = (fI screenWidth,fI screenHeight)
+plane = (screenWidth,fI . floor $ screenHeight)
 gridSize = 64
+--scaledWidth = fI . round $ (fI windowWidth)*(gridSize)/( fI windowHeight)
 maxDist = 100
 bndY = gridSize * (fI $ (Vec.length map1))
 bndX = gridSize * (fI $ (Vec.length (map1 Vec.! 0)))
@@ -425,12 +438,18 @@ bx = (fI $ (Vec.length (map1 Vec.! 0)))
 
 p1 = Player (pi/3) (95,95) (0)
 
-initWindow = defaultWindow {windowInitialSize = V2 (fI screenWidth) (fI screenHeight)}
+initWindow = defaultWindow {windowInitialSize = V2 (fI windowWidth) (fI windowHeight)}
 
 vsyncRendererConfig = 
   RendererConfig
    { rendererType = AcceleratedVSyncRenderer
-   , rendererTargetTexture = False
+   , rendererTargetTexture = True
+   }
+
+softRenderer = 
+   RendererConfig
+   { rendererType = SoftwareRenderer
+   , rendererTargetTexture = True
    }
 
 
@@ -446,6 +465,7 @@ main =
 
     --screen <- createRenderer window (-1) defaultRenderer
     screen <- createRenderer window (-1) vsyncRendererConfig
+    --screen <- createRenderer window (-1) softRenderer
     --fnt <- SDLT.openFont fontName fontSize
     
     wall1 <- readImage "pics/bluestone.png"
@@ -453,7 +473,11 @@ main =
     wall3 <- readImage "pics/wood.png"
     wall4 <- readImage "pics/mossy.png"
     wall5 <- readImage "pics/purplestone.png"
-   
+    
+    back <- createTexture screen
+                          RGBA8888
+                          TextureAccessTarget
+                          (V2 (fI . floor $ screenWidth) (fI . floor $ screenHeight))
 
     let pics = Map.fromList [(BlueStone,picList wall1)
                             ,(GreyStone,picList wall2)
@@ -461,7 +485,7 @@ main =
                             ,(Mossy,picList wall4)
                             ,(PurpleStone,picList wall5)
                             ]
-        world = World screen p1 Stop pics False
+        world = World screen back p1 Stop pics False
         bl = rendererDrawBlendMode screen
 
     bl $= BlendNone

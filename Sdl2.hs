@@ -57,6 +57,9 @@ renderTexture r t (x, y) =
   do TextureInfo _ _ w h <- queryTexture t
      copy r t Nothing (Just $ Rectangle (P $ V2 x y) (V2 w h))
 
+renderScaledTexture :: Renderer -> Texture -> IO ()
+renderScaledTexture r t = copy r t Nothing Nothing
+
 renderSprite :: Renderer -> Texture -> Pnt -> Pnt -> Width -> Height -> IO ()
 renderSprite r t (xs, ys) (xd, yd) w h = 
   do let source = Just $ Rectangle (P $ V2 xs ys) (V2 w h)
