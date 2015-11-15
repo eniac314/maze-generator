@@ -5,6 +5,7 @@ import Linear.Affine
 import qualified Data.Text as Text
 import Foreign.C.Types
 import GHC.Word
+import qualified Data.Vector.Storable as Vec
 --import qualified SDL.Image
 
 --------------------------------------------------------------------------
@@ -109,6 +110,11 @@ dPoint renderer (r,g,b,a) (x,y) =
   do rendererDrawColor renderer $= V4 r g b a
      drawPoint renderer (P $ V2 x y)
 
+dPoints :: Renderer -> Color -> [Pnt] -> IO ()
+dPoints renderer (r,g,b,a) ps = 
+  let pnts = map (\(x,y) -> (P $ V2 x y)) ps in 
+  do rendererDrawColor renderer $= V4 r g b a
+     drawPoints renderer (Vec.fromList pnts)
 --}
 
 {-

@@ -13,14 +13,21 @@ import Linear hiding (angle)
 import Linear.Affine
 import Control.Monad
 import System.Random
-
+import Codec.Picture
+import TextureMapping
+import qualified Data.Map.Strict as Map
+--import Maybe (fromJust)
 
 data World = World {
   screen :: Renderer,
   --font :: SDLT.Font,
   avatar :: Player,
-  direct :: Move
+  direct :: Move,
+  imgs :: TextureMap,
+  mapping :: Bool
 }
+
+type TextureMap = Map.Map WallKind DynamicImage
 
 data Player = Player {
               fov :: Double,
@@ -30,9 +37,17 @@ data Player = Player {
 
 data Move = Forward | Backward | Left | Right | TurnLeft | TurnRight | Stop
 
-data Wall = Wall (Double,Int,Side) | Wrong deriving Show
+data Wall = Wall { distance :: Double
+                 , kind :: Int
+                 , side :: Side 
+                 , offset :: Int } | Wrong deriving Show
 
 data Side = Hori | Verti deriving Show
+
+type ImageData = (WallKind, DynamicImage)
+                           
+data WallKind = GreyStone | RedBricks | BlueStone | ColorStone | Mossy |
+     PurpleStone | Wood deriving (Ord, Eq)
 
 distFromPlane :: Player -> Int
 distFromPlane p = round $ ((fst plane) / 2) / (tan (fov p / 2))
@@ -62,7 +77,9 @@ findHWall p a m =
               stepX = stepY / (tan a)
               loop 0 acc = Wrong
               loop n acc | (kindOfWall acc m == (-1)) = Wrong
-                         | (kindOfWall acc m /= 0) = Wall (dist (unitPos p) acc, (kindOfWall acc m),Hori)
+                         | (kindOfWall acc m /= 0) =
+                             let off = mod (round.fst $ acc) (floor gridSize) in
+                             Wall (dist (unitPos p) acc) (kindOfWall acc m) Hori off
                          | otherwise = loop (n-1)  ((fst acc) + stepX, (snd acc) - stepY)
           in loop maxDist (xA,yA)
      else Wrong
@@ -77,7 +94,9 @@ findVWall p a m =
               stepY = stepX * (tan a)
               loop 0 acc = Wrong
               loop n acc | (kindOfWall acc m == (-1)) = Wrong
-                         | (kindOfWall acc m /= 0) = Wall (dist (unitPos p) acc, (kindOfWall acc m), Verti)
+                         | (kindOfWall acc m /= 0) =
+                             let off = mod (round.snd $ acc) (floor gridSize) in
+                             Wall (dist (unitPos p) acc) (kindOfWall acc m) Verti off
                          | otherwise = loop (n-1)  ((fst acc) + stepX, (snd acc) - stepY)
           in loop maxDist (xB,yB)
      else Wrong
@@ -86,15 +105,16 @@ findVWall p a m =
 castRay :: Player -> Double ->  Mat Int -> Wall
 castRay p a m = 
   case (findVWall p a m, findHWall p a m) of 
-    (Wall(d1,t1,s1),Wrong) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
-    (Wrong,Wall(d1,t1,s1)) -> Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
-    (Wall(d1,t1,s1),Wall(d2,t2,s2)) -> if (d1 <= d2)
-                                       then Wall (cos (betaDiff a (angle p)) * d1,t1,s1)
-                                       else Wall (cos (betaDiff a (angle p)) * d2,t2,s2)
+    (Wall d1 t1 s1 off,Wrong) -> Wall (cos (betaDiff a (angle p)) * d1) t1 s1 off
+    (Wrong,Wall d1 t1 s1 off) -> Wall (cos (betaDiff a (angle p)) * d1) t1 s1 off
+    (Wall d1 t1 s1 off,Wall d2 t2 s2 off') -> if (d1 <= d2)
+                                       then Wall (cos (betaDiff a (angle p)) * d1) t1 s1 off
+                                       else Wall (cos (betaDiff a (angle p)) * d2) t2 s2 off'
     _ -> Wrong
 
-fromWall (Wall w) = w
-fromWall Wrong = (10000,(-1),Hori)
+
+fromWall Wrong = Wall 10000 (-1) Hori 0 
+fromWall w = w
 
 betaDiff a b =  min ((2 * pi) - abs(a - b)) (abs(a - b))
 
@@ -114,7 +134,7 @@ castRays p m = let angInc = (fov p) / (fst plane)
 
 getProjections :: Player -> [Wall] -> [Wall]
 getProjections p walls = let dp = fI.distFromPlane $ p 
-                         in map (\w -> let (d,t,s) = fromWall w in Wall ((dp*gridSize/d),t,s)) walls
+                         in map (\w -> let Wall d t s off = w in Wall (dp*gridSize/d) t s off) walls
  
 
 isUp a | sin a > 0 = 1
@@ -149,31 +169,86 @@ normalize a | a > 0 = mod' a (2*pi)
 fI :: (Integral a, Num b) => a -> b
 fI = fromIntegral
 
-projToLines :: [Wall] -> Renderer -> IO [()]
-projToLines ws r = sequence $ map (\(w,n) -> wallToLine w r n) (zip ws [1..]) 
+projToLines :: [Wall] -> TextureMap -> Bool -> Renderer -> IO [()]
+projToLines ws pics True r =
+ sequence $ map (\(w,n) -> wallToPts w r pics n) (zip ws [1..])
+projToLines ws pics False r =
+ sequence $ map (\(w,n) -> wallToLine w r n) (zip ws [1..])
+
 
 wallToLine :: Wall -> Renderer -> Double -> IO ()
-wallToLine w r n = let (d,t,si) =  fromWall w
+wallToLine w r n = let Wall d t si _ = w
                        h = div (fI.snd $ plane) 2
                        hl = round (d/2)
                        n' = fI . floor $ n
                    in dLine r (wallTypeToColor (t,si)) (n',(h-hl)) (n',(h+hl))     
                       
 
+wallToPts :: Wall -> Renderer -> TextureMap -> Double -> IO ()
+wallToPts w r pics n = 
+  let Wall d t si off = w
+      n' = fI . floor $ n
+      h = div (fI.snd $ plane) 2
+      hl = round (d/2)
+      l = fI h + fI hl
+      ys = [round $ ((gridSize - 1)*y)/l | y <- [0..l]]
+      pnts = zip (cycle [off]) ys --Points in texture
+      colors = map (wallTypeToTColor (t,si) pics) pnts
+      minY = h - hl
+      ys' = zip [(n',y) | y <- [minY..(minY + 2*hl)]] colors
+      ys'' = sortBy pointSort ys'
+      ys''' = groupBy pointGroup ys''
+      ys4 = map subList ys'''
+
+
+  
+  in do --sequence $ map (\(p,c) -> dPoint r c p) ys'
+        sequence $ map (\(c,ps) -> dPoints r c ps) ys4
+        --putStrLn $ show ys''' 
+        return ()
+
+pointSort :: ((CInt,CInt),Color) -> ((CInt,CInt),Color) -> Ordering
+pointSort (_ ,c) (_,c')
+  | c == c' = EQ
+  | c < c'  = LT
+  | c > c'  = GT
+
+pointGroup :: ((CInt,CInt),Color) -> ((CInt,CInt),Color) -> Bool
+pointGroup (_ ,c) (_,c')
+  | c == c' = True
+  | otherwise = False
+
+subList :: [((CInt,CInt),Color)] -> (Color,[(CInt,CInt)])
+subList l@((p,c):xs) = (c,map fst l)
+
+wallTypeToTColor :: (Int,Side) -> TextureMap -> (Int,Int) -> Color
+wallTypeToTColor (t,s) tm p = 
+  case (Map.lookup (wallTypeToTexture t) tm) of 
+    Nothing -> (0,0,0,0)
+    Just d  -> case getPixel d p of 
+                Nothing -> (0,0,0,0)
+                Just c  -> c
+
+wallTypeToTexture :: Int -> WallKind
+wallTypeToTexture 1 = BlueStone
+wallTypeToTexture 2 = GreyStone
+wallTypeToTexture 3 = Wood
+wallTypeToTexture 4 = Mossy
+wallTypeToTexture 5 = PurpleStone
 
 wallTypeToColor :: (Int,Side) -> Color
-wallTypeToColor (1,Hori) = getPixel 24 24 229 
-wallTypeToColor (1,Verti) =  getPixel 41 41 172
-wallTypeToColor (2,Hori) = getPixel 243 28 28
-wallTypeToColor (2,Verti) =  getPixel 190 8 8
-wallTypeToColor (3,Hori) = getPixel 11 239 92
-wallTypeToColor (3,Verti) =  getPixel 24 138 64
-wallTypeToColor (4,Hori) = getPixel 138 24 122
-wallTypeToColor (4,Verti) =  getPixel 86 37 79
-wallTypeToColor (5,Hori) = getPixel 255 165 0
-wallTypeToColor (5,Verti) =  getPixel 194 130 14
-wallTypeToColor ((-1),Hori) = getPixel 255 255 255
-wallTypeToColor ((-1),Verti) =  getPixel 255 255 255
+wallTypeToColor (1,Hori) = (24, 24, 229, 255)
+wallTypeToColor (1,Verti) =  (41,41,172,255)
+wallTypeToColor (2,Hori) = (243,28,28,20)
+wallTypeToColor (2,Verti) = (190,8,8,20)
+wallTypeToColor (3,Hori) = (11,239,92,255)
+wallTypeToColor (3,Verti) =  (24,138,64,72)
+wallTypeToColor (4,Hori) = (138,24,122,255) 
+wallTypeToColor (4,Verti) =  (86,37,79,255)
+wallTypeToColor (5,Hori) = (255,165,0,255)
+wallTypeToColor (5,Verti) =  (194,130,14,255)
+wallTypeToColor ((-1),Hori) = (255,255,255,255)
+wallTypeToColor ((-1),Verti) =  (255,255,255,255)
 
 
 {-
@@ -183,9 +258,6 @@ tan = opp/adj
 -}
 ---------------------------------------------------------------------------------------------------
 {- Graphics -}
-
-getPixel :: Word8 -> Word8 -> Word8 -> Color
-getPixel r g b = (r,g,b,0)
 
 pixelsToScreen :: [Pnt] -> Renderer -> Color -> [IO ()]
 pixelsToScreen xs r c = map (\p -> dPoint r c p) xs
@@ -207,20 +279,21 @@ move w =
                                 proj = getProjections pl rays
                                 newP = pl { unitPos = (sX + (fst.unitPos $ pl), sY + (snd.unitPos $ pl)),
                                            angle = sA + angle pl}
+                                p = imgs w
                             
-                            start <- ticks 
+                            --start <- ticks 
                             
                             rendererDrawColor (screen w) $= V4 0 0 0 0      
                             clear render
-                            projToLines proj render
+                            projToLines proj p (mapping w) render
                             --rendererDrawColor (screen w) $= V4 0 0 0 0 
                             present render
                             
 
 
-                            stop <- ticks
-                            let del = (timeDelay start stop)
-                            unless (del == 0) (delay del)
+                            --stop <- ticks
+                            --let del = (timeDelay start stop)
+                            --unless (del == 0) (delay del)
                             --putStrLn (show del)
                             loop (n-1) (w {avatar = newP}) sX sY sA
     
@@ -253,11 +326,12 @@ renderWorld :: World -> IO World
 renderWorld w = do do let p = avatar w
                           r = screen w
                           rays = castRays p map1
+                          pics = imgs w
                           proj = getProjections p rays
                       --clear r
                       rendererDrawColor (screen w) $= V4 0 0 0 0      
                       clear r
-                      projToLines proj r
+                      projToLines proj pics (mapping w) r
                       --rendererDrawColor (screen w) $= V4 0 0 0 0
                       --textToSur (toString p) (font w) 560 10 10 30 s
                       present r
@@ -273,7 +347,14 @@ toDeg :: Double -> Double
 toDeg a = a * 360/(2*pi)
 
 timeDelay start stop = let res = 30 - (stop - start)
-                       in if (res > 0 && res < 100 ) then res else 0                      
+                       in if (res > 0 && res < 100 ) then res else 0
+
+picList :: Either String DynamicImage -> DynamicImage
+picList (Prelude.Right i) = i
+
+swapMapping :: World -> World
+swapMapping w | (mapping w) = w {mapping = False}
+              | otherwise   = w {mapping = True }
 -----------------------------------------------------------------------------------------------------
 {- Text 
 
@@ -348,8 +429,8 @@ initWindow = defaultWindow {windowInitialSize = V2 (fI screenWidth) (fI screenHe
 
 vsyncRendererConfig = 
   RendererConfig
-   { SDL.rendererType = SDL.AcceleratedVSyncRenderer
-   , SDL.rendererTargetTexture = False
+   { rendererType = AcceleratedVSyncRenderer
+   , rendererTargetTexture = False
    }
 
 
@@ -363,18 +444,34 @@ main =
     
     window <- createWindow (Text.pack "RayCaster 0.1") initWindow
 
-    screen <- createRenderer window (-1) defaultRenderer
-    --screen <- createRenderer window (-1) vsyncRendererConfig
+    --screen <- createRenderer window (-1) defaultRenderer
+    screen <- createRenderer window (-1) vsyncRendererConfig
     --fnt <- SDLT.openFont fontName fontSize
     
-    let world = World screen p1 Stop
+    wall1 <- readImage "pics/bluestone.png"
+    wall2 <- readImage "pics/greystone.png"
+    wall3 <- readImage "pics/wood.png"
+    wall4 <- readImage "pics/mossy.png"
+    wall5 <- readImage "pics/purplestone.png"
+   
 
+    let pics = Map.fromList [(BlueStone,picList wall1)
+                            ,(GreyStone,picList wall2)
+                            ,(Wood,picList wall3)
+                            ,(Mossy,picList wall4)
+                            ,(PurpleStone,picList wall5)
+                            ]
+        world = World screen p1 Stop pics False
+        bl = rendererDrawBlendMode screen
+
+    bl $= BlendNone
     loop world
 
     where loop w = do (quit,w1) <- whileEvents w
                       --rendererDrawColor (screen w) $= V4 0 0 0 0
                       --clear (screen w)
                       w2 <- move w1
+                      --putStrLn "test"
                       --present (screen w)
                       
                       unless quit (loop w2)
@@ -400,6 +497,7 @@ main =
                              KeycodeEscape -> return (True,w)
                              KeycodeLCtrl -> whileEvents (w {direct = Main.Left})
                              KeycodeLAlt -> whileEvents (w {direct = Main.Right})
+                             KeycodeM -> whileEvents (swapMapping w)
                              _ -> return (False,w)
                  _ -> return (False,w)
 
