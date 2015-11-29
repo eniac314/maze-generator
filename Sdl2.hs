@@ -6,7 +6,7 @@ import qualified Data.Text as Text
 import Foreign.C.Types
 import GHC.Word
 import qualified Data.Vector.Storable as Vec
---import qualified SDL.Image
+import qualified SDL.Image
 
 --------------------------------------------------------------------------
 {- Loading images -}
@@ -19,12 +19,12 @@ loadOptBMP window path =
      convertSurface loadedSurface desiredFormat <* freeSurface loadedSurface
 
 
---loadTexture :: Renderer -> String -> IO Texture
---loadTexture r path = 
---  do loadedSurface <- SDL.Image.load path
---     texture <- createTextureFromSurface r loadedSurface
---     freeSurface loadedSurface
---     return texture
+loadTexture :: Renderer -> String -> IO Texture
+loadTexture r path = 
+  do loadedSurface <- SDL.Image.load path
+     texture <- createTextureFromSurface r loadedSurface
+     freeSurface loadedSurface
+     return texture
 
 
 loadBMPTexture :: Renderer -> String -> IO Texture
@@ -43,14 +43,14 @@ loadBMPColorKeyTexture renderer path (r,g,b,a) =
      freeSurface loadedSurface
      return texture
 
---loadColorKeyTexture :: Renderer -> String -> Color -> IO Texture
---loadColorKeyTexture renderer path (r,g,b,a) = 
---  do loadedSurface <- SDL.Image.load path
---     let key = V4 r g b a
---     SDL.surfaceColorKey loadedSurface $= Just key
---     texture <- createTextureFromSurface renderer loadedSurface
---     freeSurface loadedSurface
---     return texture
+loadColorKeyTexture :: Renderer -> String -> Color -> IO Texture
+loadColorKeyTexture renderer path (r,g,b,a) = 
+  do loadedSurface <- SDL.Image.load path
+     let key = V4 r g b a
+     SDL.surfaceColorKey loadedSurface $= Just key
+     texture <- createTextureFromSurface renderer loadedSurface
+     freeSurface loadedSurface
+     return texture
 
 renderTexture :: Renderer -> Texture -> Pnt -> IO ()
 renderTexture r t (x, y) = 
@@ -65,6 +65,13 @@ renderSprite r t (xs, ys) (xd, yd) w h =
   do let source = Just $ Rectangle (P $ V2 xs ys) (V2 w h)
          destination = Just $ Rectangle (P $ V2 xd yd) (V2 w h)
      copy r t source destination 
+
+renderPart :: Renderer -> Texture -> Pnt -> Pnt
+           -> (Width,Height) -> (Width,Height) -> IO ()
+renderPart r t (xs, ys) (xd, yd) (ws,hs) (wd,hd) =
+  do let source = Just $ Rectangle (P $ V2 xs ys) (V2 ws hs)
+         destination = Just $ Rectangle (P $ V2 xd yd) (V2 wd hd)
+     copy r t source destination            
   
 --------------------------------------------------------------------------
 {- Events -}
@@ -118,28 +125,3 @@ dPoints renderer (r,g,b,a) ps =
   let pnts = map (\(x,y) -> (P $ V2 x y)) ps in 
   do rendererDrawColor renderer $= V4 r g b a
      drawPoints renderer (Vec.fromList pnts)
---}
-
-{-
---software rendering
-main :: IO ()
-main = do
-  initializeAll
-  window <- createWindow (Text.pack "Little Sheep 0.1") initWindow
-  background <- loadOptBMP  window "../../images/background_sky.bmp"
-  
-  appLoop window background
-
-  destroyWindow window
-  quit 
-  
-
-
-appLoop :: Window -> Surface -> IO ()
-appLoop w s = 
-  do screenSurface <- getWindowSurface w
-     surfaceBlit s Nothing screenSurface Nothing
-     updateWindowSurface w
-     events <- pollEvents
-     unless (hasEventKey KeycodeQ events) (appLoop w s)
--}

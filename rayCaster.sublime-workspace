@@ -4,6 +4,86 @@
 		"selected_items":
 		[
 			[
+				"sort",
+				"sortAndDrawPoints"
+			],
+			[
+				"wall",
+				"wallTypeToTColor"
+			],
+			[
+				"scree",
+				"screenHeight"
+			],
+			[
+				"screen",
+				"screenWidth"
+			],
+			[
+				"grid",
+				"gridSize"
+			],
+			[
+				"scre",
+				"screenHeight"
+			],
+			[
+				"sce",
+				"screenWidth"
+			],
+			[
+				"gr",
+				"gridSize"
+			],
+			[
+				"re",
+				"renderScaledTexture"
+			],
+			[
+				"dr",
+				"drawSortedPoints"
+			],
+			[
+				"point",
+				"pointGroup"
+			],
+			[
+				"d",
+				"dPoints"
+			],
+			[
+				"GR",
+				"GreyStone"
+			],
+			[
+				"wa",
+				"wallTypeToTexture"
+			],
+			[
+				"Te",
+				"TextureMap"
+			],
+			[
+				"pic",
+				"picList"
+			],
+			[
+				"Gr",
+				"GreyStone"
+			],
+			[
+				"from",
+				"fromList"
+			],
+			[
+				"Wall",
+				"WallKind"
+			],
+			[
+				"wallType",
+				"wallTypeToTexture"
+			],
+			[
 				"pu",
 				"putStrLn"
 			],
@@ -22,10 +102,6 @@
 			[
 				"reder",
 				"renderSprite"
-			],
-			[
-				"d",
-				"dLines"
 			],
 			[
 				"name",
@@ -94,10 +170,6 @@
 			[
 				"JA",
 				"JAry"
-			],
-			[
-				"from",
-				"fromJValue"
 			],
 			[
 				"j",
@@ -396,10 +468,6 @@
 				"height"
 			],
 			[
-				"scre",
-				"screen"
-			],
-			[
 				"scren",
 				"screenwidth"
 			],
@@ -444,76 +512,8 @@
 				"Deep2"
 			],
 			[
-				"Gr",
-				"GrassLand"
-			],
-			[
 				"g",
 				"getTile"
-			],
-			[
-				"Lan",
-				"Landscape"
-			],
-			[
-				"fl",
-				"floor"
-			],
-			[
-				"hg",
-				"hsvToRgb"
-			],
-			[
-				"WOrd",
-				"Word8"
-			],
-			[
-				"hs",
-				"hsvToRgb"
-			],
-			[
-				"Word",
-				"Word8"
-			],
-			[
-				"of",
-				"offset"
-			],
-			[
-				"zo",
-				"zoomedPix"
-			],
-			[
-				"nrb",
-				"nbrSummit"
-			],
-			[
-				"P",
-				"Pixel"
-			],
-			[
-				"zom",
-				"zoom2"
-			],
-			[
-				"Int",
-				"Int16"
-			],
-			[
-				"rand",
-				"randList2"
-			],
-			[
-				"pixel",
-				"pixelsToScreen"
-			],
-			[
-				"ran",
-				"Random"
-			],
-			[
-				"in",
-				"interNoise"
 			]
 		]
 	},
@@ -523,7 +523,15 @@
 			"file": "raycaster.hs",
 			"settings":
 			{
-				"buffer_size": 17176,
+				"buffer_size": 21137,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "TextureMapping.hs",
+			"settings":
+			{
+				"buffer_size": 237,
 				"line_ending": "Unix"
 			}
 		},
@@ -531,7 +539,7 @@
 			"file": "Sdl2.hs",
 			"settings":
 			{
-				"buffer_size": 4275,
+				"buffer_size": 4644,
 				"line_ending": "Unix"
 			}
 		}
@@ -677,6 +685,12 @@
 		"case_sensitive": true,
 		"find_history":
 		[
+			"drawSortedPoints",
+			"screenWi",
+			"projTo",
+			"proj",
+			"pro",
+			"renderWo",
 			"plane",
 			"xO' yO'",
 			"xO yO",
@@ -798,8 +812,7 @@
 			"lines",
 			"pixel",
 			"delay",
-			"surfaceSize",
-			"font"
+			"surfaceSize"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -807,6 +820,7 @@
 		"regex": false,
 		"replace_history":
 		[
+			"sortAndDrawPoints",
 			"off'",
 			"off",
 			"Wrong",
@@ -847,7 +861,7 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 0,
 			"sheets":
 			[
 				{
@@ -856,15 +870,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 17176,
+						"buffer_size": 21137,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6396,
-								6396
+								7489,
+								7489
 							]
 						],
 						"settings":
@@ -874,27 +888,55 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2674.0,
+						"translation.y": 3951.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "TextureMapping.hs",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 237,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								225,
+								225
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Haskell/Haskell.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
 					"type": "text"
 				},
 				{
-					"buffer": 1,
+					"buffer": 2,
 					"file": "Sdl2.hs",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4275,
+						"buffer_size": 4644,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								1961,
+								1961
 							]
 						],
 						"settings":
@@ -904,10 +946,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 1812.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 2,
 					"type": "text"
 				}
 			]

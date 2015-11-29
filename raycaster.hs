@@ -6,7 +6,6 @@ import Data.Bits
 import Data.List
 import SDL
 import Sdl2
---import SDL.Image
 import qualified Data.Text as Text
 import Foreign.C.Types
 import Linear hiding (angle)
@@ -16,7 +15,7 @@ import System.Random
 import Codec.Picture
 import TextureMapping
 import qualified Data.Map.Strict as Map
---import Maybe (fromJust)
+import Data.Maybe (fromJust)
 
 data World = World {
   screen :: Renderer,
@@ -25,10 +24,13 @@ data World = World {
   avatar :: Player,
   direct :: Move,
   imgs :: TextureMap,
-  mapping :: Bool
+  sdlImgs :: SDLTextureMap,
+  mapping :: Mapping
 }
 
 type TextureMap = Map.Map WallKind DynamicImage
+type SDLTextureMap = Map.Map WallKind Texture
+data Mapping = Lines | Juicy | SDLText deriving Eq
 
 data Player = Player {
               fov :: Double,
@@ -170,8 +172,8 @@ normalize a | a > 0 = mod' a (2*pi)
 fI :: (Integral a, Num b) => a -> b
 fI = fromIntegral
 
-projToLines :: [Wall] -> TextureMap -> Bool -> Renderer -> Texture -> IO [()]
-projToLines ws pics True r b =
+projToLines :: [Wall] -> TextureMap -> SDLTextureMap -> Mapping -> Renderer -> Texture -> IO [()]
+projToLines ws pics pics' Juicy r b =
  do (rendererRenderTarget r) $= Just b
     clear r
     mapM (\(w,n) -> wallToPts w r pics n) (zip ws [1..])
@@ -179,10 +181,18 @@ projToLines ws pics True r b =
     renderScaledTexture r b
     return [()]
 
-projToLines ws pics False r b =
+projToLines ws pics pics' Lines r b =
  do (rendererRenderTarget r) $= Just b
     clear r
     mapM (\(w,n) -> wallToLine w r n) (zip ws [1..])
+    (rendererRenderTarget r) $= Nothing
+    renderScaledTexture r b
+    return [()]
+
+projToLines ws pics pics' SDLText r b =
+ do (rendererRenderTarget r) $= Just b
+    clear r
+    mapM (\(w,n) -> wallToPts' w r pics' n) (zip ws [1..])
     (rendererRenderTarget r) $= Nothing
     renderScaledTexture r b
     return [()]
@@ -208,14 +218,32 @@ wallToPts w r pics n =
       colors = map (wallTypeToTColor (t,si) pics) pnts
       minY = h - hl
       ys' = zip [(n',y) | y <- [minY..(minY + 2*hl)]] colors
+  in sortAndDrawPoints ys' r 
+
+wallToPts' :: Wall -> Renderer -> SDLTextureMap -> Double -> IO ()
+wallToPts' w r pics n = 
+  let Wall d t si off = w
+      n' = fI . floor $ n
+      h = div (fI.snd $ plane) 2
+      hl = round (d/2)
+      l = fI $ round d -- height of wall on screen
+      pic = fromJust $ Map.lookup (wallTypeToTexture t) pics 
+      --ys = [round $ ((gridSize - 1)*y)/l | y <- [0..l]]
+      --pnts = zip (cycle [off]) ys --Points in texture
+      --colors = map (wallTypeToTColor (t,si) pics) pnts
+      --minY = h - hl
+      --ys' = zip [(n',y) | y <- [minY..(minY + 2*hl)]] colors
+  in renderPart r pic (fromIntegral off,0) (n',(h-hl)) (1,64) (1,l)
 
 
-  in drawSortedPoints ys' r 
+  
 
-drawSortedPoints :: [((CInt,CInt),Color)] -> Renderer -> IO ()
-drawSortedPoints xs r =
+sortAndDrawPoints :: [((CInt,CInt),Color)] -> Renderer -> IO ()
+sortAndDrawPoints xs r =
  let xs' = (map subList).(groupBy pointGroup).(sortBy pointSort) $ xs  
  in mapM_ (\(c,ps) -> dPoints r c ps) xs'
+
+sortAndDrawPoints' xs r = mapM_ (\(p,c)-> dPoint r c p) xs
 
 pointSort :: ((CInt,CInt),Color) -> ((CInt,CInt),Color) -> Ordering
 pointSort (_ ,c) (_,c')
@@ -232,6 +260,7 @@ subList :: [((CInt,CInt),Color)] -> (Color,[(CInt,CInt)])
 subList l@((p,c):xs) = (c,map fst l)
 
 wallTypeToTColor :: (Int,Side) -> TextureMap -> (Int,Int) -> Color
+--wallTypeToTColor _ _ _ = (0,0,227,0)
 wallTypeToTColor (t,s) tm p = 
   case (Map.lookup (wallTypeToTexture t) tm) of 
     Nothing -> (0,0,0,0)
@@ -290,12 +319,13 @@ move w =
                                 newP = pl { unitPos = (sX + (fst.unitPos $ pl), sY + (snd.unitPos $ pl)),
                                            angle = sA + angle pl}
                                 p = imgs w
+                                p' = sdlImgs w
                             
                             --start <- ticks 
                             
                             rendererDrawColor (screen w) $= V4 0 0 0 0      
                             clear render
-                            projToLines proj p (mapping w) render (back w)
+                            projToLines proj p p' (mapping w) render (back w)
                             --rendererDrawColor (screen w) $= V4 0 0 0 0 
                             present render
                             
@@ -337,11 +367,12 @@ renderWorld w = do do let p = avatar w
                           r = screen w
                           rays = castRays p map1
                           pics = imgs w
+                          pics' = sdlImgs w
                           proj = getProjections p rays
                       --clear r
                       rendererDrawColor (screen w) $= V4 0 0 0 0      
                       clear r
-                      projToLines proj pics (mapping w) r (back w)
+                      projToLines proj pics pics' (mapping w) r (back w)
                       --rendererDrawColor (screen w) $= V4 0 0 0 0
                       --textToSur (toString p) (font w) 560 10 10 30 s
                       present r
@@ -363,8 +394,9 @@ picList :: Either String DynamicImage -> DynamicImage
 picList (Prelude.Right i) = i
 
 swapMapping :: World -> World
-swapMapping w | (mapping w) = w {mapping = False}
-              | otherwise   = w {mapping = True }
+swapMapping w | (mapping w == Lines ) = w {mapping = Juicy}
+              | (mapping w == Juicy ) = w {mapping = SDLText}
+              | otherwise   = w {mapping = Lines }
 -----------------------------------------------------------------------------------------------------
 {- Text 
 
@@ -395,9 +427,9 @@ format  n xs = let chunk _ [] = ([],[])
 {-Main-}
 
 screenWidth = (fI windowWidth)*(screenHeight)/( fI windowHeight) :: Double
-screenHeight = gridSize * 2 :: Double
-windowWidth = 640 :: Int
-windowHeight = 480 :: Int
+screenHeight = gridSize * 10 :: Double
+windowWidth = 800 :: Int
+windowHeight = 640 :: Int
 --fontName = "DejaVuSansMono.ttf"
 --fontSize = 14 :: Int
 
@@ -473,6 +505,12 @@ main =
     wall3 <- readImage "pics/wood.png"
     wall4 <- readImage "pics/mossy.png"
     wall5 <- readImage "pics/purplestone.png"
+
+    wall1' <- loadTexture screen "pics/bluestone.png"
+    wall2' <- loadTexture screen "pics/greystone.png"
+    wall3' <- loadTexture screen "pics/wood.png"
+    wall4' <- loadTexture screen "pics/mossy.png"
+    wall5' <- loadTexture screen "pics/purplestone.png"
     
     back <- createTexture screen
                           RGBA8888
@@ -485,11 +523,22 @@ main =
                             ,(Mossy,picList wall4)
                             ,(PurpleStone,picList wall5)
                             ]
-        world = World screen back p1 Stop pics False
+
+        pics' = Map.fromList [(BlueStone, wall1')
+                             ,(GreyStone, wall2')
+                             ,(Wood, wall3')
+                             ,(Mossy, wall4')
+                             ,(PurpleStone, wall5')
+                             ]
+
+        world = World screen back p1 Stop pics pics' Lines
         bl = rendererDrawBlendMode screen
 
     bl $= BlendNone
     loop world
+    destroyRenderer screen
+    destroyWindow window
+    quit
 
     where loop w = do (quit,w1) <- whileEvents w
                       --rendererDrawColor (screen w) $= V4 0 0 0 0
@@ -524,7 +573,7 @@ main =
                              KeycodeM -> whileEvents (swapMapping w)
                              _ -> return (False,w)
                  _ -> return (False,w)
-
+    
 
 -------------------------------------------------------------------------------------------------------------------
 {- Vectors -}

@@ -42,6 +42,13 @@
   (major1) == 2 && (major2) <  1 || \
   (major1) == 2 && (major2) == 1 && (minor) <= 0)
 
+/* package sdl2-image-0.2 */
+#define VERSION_sdl2_image "0.2"
+#define MIN_VERSION_sdl2_image(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  2 || \
+  (major1) == 0 && (major2) == 2 && (minor) <= 0)
+
 /* package text-1.2.1.3 */
 #define VERSION_text "1.2.1.3"
 #define MIN_VERSION_text(major1,major2,minor) (\
@@ -133,5 +140,5 @@
   (major1) == 2 && (major2) <  24 || \
   (major1) == 2 && (major2) == 24 && (minor) <= 0)
 
-#define CURRENT_PACKAGE_KEY "rayCa_6Bz73FohyStFoGFVxBqfML"
+#define CURRENT_PACKAGE_KEY "rayCa_78vXd54C3fiGtRZWdxbOYS"
 

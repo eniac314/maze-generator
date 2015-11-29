@@ -17,7 +17,7 @@ version = Version [0,1,0,0] []
 bindir, libdir, datadir, libexecdir, sysconfdir :: FilePath
 
 bindir     = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/bin"
-libdir     = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.2/rayCaster-0.1.0.0-6Bz73FohyStFoGFVxBqfML"
+libdir     = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/lib/x86_64-linux-ghc-7.10.2/rayCaster-0.1.0.0-78vXd54C3fiGtRZWdxbOYS"
 datadir    = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/share/x86_64-linux-ghc-7.10.2/rayCaster-0.1.0.0"
 libexecdir = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/libexec"
 sysconfdir = "/home/fayong/prog/Haskell/rayCaster/.cabal-sandbox/etc"
